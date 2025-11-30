@@ -20,6 +20,7 @@ This extension introduces a new root path `/catalogs` and nests standard STAC AP
 | `GET` | `/catalogs` | **The Registry.** Lists all available sub-catalogs. |
 | `GET` | `/catalogs/{catalogId}` | **Sub-Catalog Root.** Acts as the Landing Page for the provider. |
 | `GET` | `/catalogs/{catalogId}/conformance` | Conformance classes specific to this sub-catalog. |
+| `GET` | `/catalogs/{catalogId}/queryables` | Filter Extension. Lists fields available for filtering in this sub-catalog. |
 | `GET` | `/catalogs/{catalogId}/collections` | Lists collections belonging to this sub-catalog. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}` | Gets a specific collection definition. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}/items` | **Item Search.** Fetches items from this specific collection. |
