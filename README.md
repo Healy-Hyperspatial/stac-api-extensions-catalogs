@@ -69,9 +69,9 @@ This endpoint returns a JSON object structurally similar to a standard `/collect
       "description": "Landsat collections provided by USGS.",
       "stac_version": "1.0.0",
       "links": [
-        { "rel": "self", "href": "[https://api.example.com/catalogs/usgs-landsat](https://api.example.com/catalogs/usgs-landsat)" },
-        { "rel": "root", "href": "[https://api.example.com/](https://api.example.com/)" },
-        { "rel": "child", "href": "[https://api.example.com/catalogs/usgs-landsat/collections](https://api.example.com/catalogs/usgs-landsat/collections)" }
+        { "rel": "self", "href": "https://api.example.com/catalogs/usgs-landsat" },
+        { "rel": "root", "href": "https://api.example.com/" },
+        { "rel": "child", "href": "https://api.example.com/catalogs/usgs-landsat/collections" }
       ]
     },
     {
@@ -81,20 +81,20 @@ This endpoint returns a JSON object structurally similar to a standard `/collect
       "description": "Sentinel collections provided by ESA.",
       "stac_version": "1.0.0",
       "links": [
-        { "rel": "self", "href": "[https://api.example.com/catalogs/esa-sentinel](https://api.example.com/catalogs/esa-sentinel)" },
-        { "rel": "root", "href": "[https://api.example.com/](https://api.example.com/)" },
-        { "rel": "child", "href": "[https://api.example.com/catalogs/esa-sentinel/collections](https://api.example.com/catalogs/esa-sentinel/collections)" }
+        { "rel": "self", "href": "https://api.example.com/catalogs/esa-sentinel" },
+        { "rel": "root", "href": "https://api.example.com/" },
+        { "rel": "child", "href": "https://api.example.com/catalogs/esa-sentinel/collections" }
       ]
     }
   ],
   "links": [
     {
       "rel": "self",
-      "href": "[https://api.example.com/catalogs](https://api.example.com/catalogs)"
+      "href": "https://api.example.com/catalogs"
     },
     {
       "rel": "root",
-      "href": "[https://api.example.com/](https://api.example.com/)"
+      "href": "https://api.example.com/"
     }
   ]
 }
@@ -112,25 +112,25 @@ The global root acts as a portal. Note the use of rel="catalogs" to link to the 
   "title": "Global Data Portal",
   "description": "Entry point for the Federated STAC API.",
   "conformsTo": [
-    "[https://api.stacspec.org/v1.0.0/core](https://api.stacspec.org/v1.0.0/core)",
-    "[https://api.stacspec.org/v1.0.0-beta.1/catalogs](https://api.stacspec.org/v1.0.0-beta.1/catalogs)"
+    "https://api.stacspec.org/v1.0.0/core",
+    "https://api.stacspec.org/v1.0.0-beta.1/catalogs"
   ],
   "links": [
     {
       "rel": "self",
       "type": "application/json",
-      "href": "[https://api.example.com/](https://api.example.com/)"
+      "href": "https://api.example.com/"
     },
     {
       "rel": "catalogs",
       "type": "application/json",
-      "href": "[https://api.example.com/catalogs](https://api.example.com/catalogs)",
+      "href": "https://api.example.com/catalogs",
       "title": "List of available catalogs"
     },
     {
       "rel": "service-desc",
       "type": "application/vnd.oai.openapi+json;version=3.0",
-      "href": "[https://api.example.com/api](https://api.example.com/api)"
+      "href": "https://api.example.com/api"
     }
   ]
 }
