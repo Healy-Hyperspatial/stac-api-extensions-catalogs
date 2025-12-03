@@ -1,9 +1,9 @@
-# STAC API - Catalogs Extension
+# STAC API - Catalogs Endpoint Extension
 
-- **Title:** Catalogs
+- **Title:** Catalogs Endpoint
 - **Conformance Classes:**
   - `https://api.stacspec.org/v1.0.0/core` (required)
-  - `https://api.stacspec.org/v1.0.0-beta.1/catalogs` (required)
+  - `https://api.stacspec.org/v1.0.0-beta.1/catalogs-endpoint` (required)
 - **Scope:** STAC API - Core
 - **Extension Maturity Classification:** Proposal
 - **Dependencies:**
@@ -13,7 +13,7 @@
 
 ## Introduction
 
-This extension enables a **Federated STAC API** architecture. It transforms the API Root into a "Catalog of Catalogs" (Portal), allowing a single API to serve as a registry for multiple independent data providers.
+This extension enables a **Federated STAC API** architecture. It adds a dedicated /catalogs endpoint that serves as a machine-readable registry for multiple independent data providers, without altering the standard behavior of the API Root..
 
 In this model, the API has a fixed-depth "Hub and Spoke" structure:
 1.  **Global Root (`/`)**: The entry point. It remains a standard STAC Landing Page but includes a link to the **Catalogs Registry**.
@@ -113,7 +113,7 @@ The global root acts as a portal. Note the use of rel="catalogs" to link to the 
   "description": "Entry point for the Federated STAC API.",
   "conformsTo": [
     "https://api.stacspec.org/v1.0.0/core",
-    "https://api.stacspec.org/v1.0.0-beta.1/catalogs"
+    "https://api.stacspec.org/v1.0.0-beta.1/catalogs-endpoint"
   ],
   "links": [
     {
