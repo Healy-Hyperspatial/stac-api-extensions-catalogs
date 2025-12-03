@@ -2,8 +2,8 @@
 
 - **Title:** Catalogs
 - **Conformance Classes:**
-  - https://api.stacspec.org/v1.0.0/core (required)
-  - https://api.stacspec.org/v1.0.0-beta.1/catalogs (required)
+  - `https://api.stacspec.org/v1.0.0/core` (required)
+  - `https://api.stacspec.org/v1.0.0-beta.1/catalogs` (required)
 - **Scope:** STAC API - Core
 - **Extension Maturity Classification:** Proposal
 - **Dependencies:**
@@ -16,7 +16,7 @@
 This extension enables a **Federated STAC API** architecture. It transforms the API Root into a "Catalog of Catalogs" (Portal), allowing a single API to serve as a registry for multiple independent data providers.
 
 In this model, the API has a fixed-depth "Hub and Spoke" structure:
-1.  **Global Root (`/`)**: The entry point. Contains links to Sub-Catalogs.
+1.  **Global Root (`/`)**: The entry point. It remains a standard STAC Landing Page but includes a link to the **Catalogs Registry**.
 2.  **The Registry (`/catalogs`)**: A machine-readable list of all available Sub-Catalogs.
 3.  **Sub-Catalogs (`/catalogs/{id}`)**: The actual data providers. These behave as standard STAC API Landing Pages containing Collections.
 
@@ -35,16 +35,16 @@ This extension introduces a new root path `/catalogs` and nests standard STAC AP
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}/items` | **Item Search.** Fetches items from this specific collection. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}/items/{itemId}` | Gets a single specific item. |
 
-
 ## Link Relations
 
 Proper linking is critical for clients to navigate the federation structure.
 
 ### 1. The Global Root (`/`)
 This is the entry point.
-- `rel="data"`: MUST point to the `/catalogs` endpoint (the registry).
-- `rel="child"`: MUST point to specific sub-catalogs (e.g., `/catalogs/usgs`).
+- `rel="catalogs"`: MUST point to the `/catalogs` endpoint (the registry).
 - `rel="service-desc"`: Points to the OpenAPI definition.
+
+*Note: We use `rel="catalogs"` instead of `rel="data"` to avoid confusing standard clients that expect `data` to point to a Collections list.*
 
 ### 2. The Sub-Catalog (`/catalogs/{catalogId}`)
 This resource acts as the **Landing Page** for the provider.
@@ -102,7 +102,7 @@ This endpoint returns a JSON object structurally similar to a standard `/collect
 
 ### 2. The Global Root (`GET /`)
 
-The global root acts as a portal. Note that `rel="data"` points to the catalogs endpoint, not collections.
+The global root acts as a portal. Note the use of rel="catalogs" to link to the registry.
 
 ```json
 {
@@ -122,16 +122,15 @@ The global root acts as a portal. Note that `rel="data"` points to the catalogs 
       "href": "[https://api.example.com/](https://api.example.com/)"
     },
     {
-      "rel": "data",
+      "rel": "catalogs",
       "type": "application/json",
       "href": "[https://api.example.com/catalogs](https://api.example.com/catalogs)",
       "title": "List of available catalogs"
     },
     {
-      "rel": "child",
-      "type": "application/json",
-      "href": "[https://api.example.com/catalogs/usgs-landsat](https://api.example.com/catalogs/usgs-landsat)",
-      "title": "USGS Landsat"
+      "rel": "service-desc",
+      "type": "application/vnd.oai.openapi+json;version=3.0",
+      "href": "[https://api.example.com/api](https://api.example.com/api)"
     }
   ]
 }
