@@ -9,11 +9,14 @@
 - **Dependencies:**
   - [STAC API - Core](https://github.com/radiantearth/stac-api-spec/blob/main/core)
   - [STAC API - Collections](https://github.com/radiantearth/stac-api-spec/tree/main/ogcapi-features)
+  - - [STAC API - Transaction](https://github.com/radiantearth/stac-api-spec/tree/main/ogcapi-features/extensions/transaction)
 - **Owner**: @jonhealy1
 
 ## Introduction
 
-This extension enables a **Federated STAC API** architecture. It adds a dedicated /catalogs endpoint that serves as a machine-readable registry for multiple independent data providers, without altering the standard behavior of the API Root..
+This extension enables a **Federated STAC API** architecture. It adds a dedicated /catalogs endpoint that serves as a machine-readable registry for multiple independent data providers, without altering the standard behavior of the API Root.
+
+In addition to discovery, this extension defines **Transactional** endpoints to create and delete Catalogs and their child Collections, effectively acting as a management API for the federation.
 
 In this model, the API has a fixed-depth "Hub and Spoke" structure:
 1.  **Global Root (`/`)**: The entry point. It remains a standard STAC Landing Page but includes a link to the **Catalogs Registry**.
@@ -34,6 +37,41 @@ This extension introduces a new root path `/catalogs` and nests standard STAC AP
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}` | Gets a specific collection definition. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}/items` | **Item Search.** Fetches items from this specific collection. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}/items/{itemId}` | Gets a single specific item. |
+
+### Transactions (Management)
+
+These endpoints allow for the dynamic creation and deletion of the federation structure.
+
+| Method | URI | Description |
+| :--- | :--- | :--- |
+| `POST` | `/catalogs` | **Create Catalog.** Registers a new sub-catalog. |
+| `DELETE` | `/catalogs/{catalogId}` | **Delete Catalog.** Removes a sub-catalog. Supports `?cascade=true`. |
+| `POST` | `/catalogs/{catalogId}/collections` | **Create Collection.** Creates a collection and links it to this catalog. |
+| `DELETE` | `/catalogs/{catalogId}/collections/{collectionId}` | **Delete Collection.** Deletes the collection and removes the link from the parent catalog. |
+
+## Transaction Behavior
+
+Implementations supporting the Transaction endpoints MUST adhere to the following behaviors:
+
+### 1. Catalog Creation (`POST /catalogs`)
+* **Body:** Accepts a standard [STAC Catalog](https://github.com/radiantearth/stac-spec/blob/master/catalog-spec/catalog-spec.md) JSON object.
+* **Behavior:** The API creates the Catalog resource and makes it available in the `/catalogs` registry list.
+
+### 2. Catalog Deletion (`DELETE /catalogs/{id}`)
+* **Default Behavior:** Deletes the Catalog object.
+* **Cascade Parameter:** Implementations SHOULD support a `?cascade=true` query parameter.
+    * If `cascade=true`: The API deletes the Catalog **AND** all Collections linked as children of that Catalog.
+    * If `cascade=false` (default): The API deletes the Catalog, but orphaned Collections may remain in the database (implementation dependent).
+
+### 3. Scoped Collection Creation (`POST /catalogs/{id}/collections`)
+* **Body:** Accepts a standard [STAC Collection](https://github.com/radiantearth/stac-spec/blob/master/collection-spec/collection-spec.md) JSON object.
+* **Behavior:**
+    1.  Creates the Collection resource.
+    2.  **Automatic Linking:** Automatically adds a `rel="parent"` (or `rel="catalog"`) link in the Collection pointing to `{catalogId}`.
+    3.  **Reverse Linking:** Automatically adds a `rel="child"` link in the Catalog pointing to the new Collection.
+
+### 4. Scoped Collection Deletion (`DELETE .../collections/{id}`)
+* **Behavior:** Deletes the Collection resource and removes the corresponding `child` link from the parent Catalog to ensure referential integrity.
 
 ## Link Relations
 
