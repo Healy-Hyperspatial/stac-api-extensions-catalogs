@@ -20,11 +20,12 @@ This extension enables a **Federated STAC API** architecture. It adds a dedicate
 
 In addition to discovery, this extension defines **Transactional** endpoints to create, update, and delete Catalogs and their child Collections, effectively acting as a management API for the federation.
 
-In this model, the API has a fixed-depth "Hub and Spoke" structure:
-1.  **Global Root (`/`)**: The standard entry point. It remains a clean STAC Landing Page but includes a link to the **Catalogs Registry**.
-2.  **The Registry (`/catalogs`)**: A machine-readable list of all available Sub-Catalogs.
-3.  **Sub-Catalogs (`/catalogs/{id}`)**: Each Catalog essentially behaves as standard STAC API Landing Page containing Collections.
+In this model, the API supports a **Recursive Hierarchical** structure:
 
+1.  **Global Root (`/`)**: The standard entry point. It remains a clean STAC Landing Page but includes a link to the **Catalogs Registry**.
+2.  **The Registry (`/catalogs`)**: The top-level list of root catalogs.
+3.  **Sub-Catalogs (`/catalogs/{id}`)**: These behave as standard STAC Catalogs. Unlike the root, they can contain **nested Sub-Catalogs** (accessible via `/catalogs/{id}/catalogs`) in addition to Collections, allowing for deep, multi-level organizational trees (e.g., `Provider -> Theme -> Year`).
+   
 ### Safety-First Architecture
 A core tenet of this extension is **Data Safety**. The `/catalogs` endpoints are strictly for **Organization**, while the core `/collections` endpoints are reserved for **Destruction**. Operations performed via the catalogs endpoint (like deleting a catalog) are guaranteed to never result in the accidental loss of Collection or Item data.
 
