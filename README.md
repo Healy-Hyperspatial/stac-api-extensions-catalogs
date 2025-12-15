@@ -4,11 +4,13 @@
 - **Conformance Classes:**
   - `https://api.stacspec.org/v1.0.0/core` (required)
   - `https://api.stacspec.org/v1.0.0-beta.1/catalogs-endpoint` (required)
+  - `https://api.stacspec.org/v1.0.0-rc.2/children` (recommended)
 - **Scope:** STAC API - Core
 - **Extension Maturity Classification:** Proposal
 - **Dependencies:**
   - [STAC API - Core](https://github.com/radiantearth/stac-api-spec/blob/main/core)
   - [STAC API - Collections](https://github.com/radiantearth/stac-api-spec/tree/main/ogcapi-features)
+  - [STAC API - Children](https://github.com/stac-api-extensions/children)
   - [STAC API - Transaction](https://github.com/radiantearth/stac-api-spec/tree/main/ogcapi-features/extensions/transaction) (Reference pattern)
 - **Owner**: @jonhealy1
 
@@ -21,7 +23,10 @@ In addition to discovery, this extension defines **Transactional** endpoints to 
 In this model, the API has a fixed-depth "Hub and Spoke" structure:
 1.  **Global Root (`/`)**: The standard entry point. It remains a clean STAC Landing Page but includes a link to the **Catalogs Registry**.
 2.  **The Registry (`/catalogs`)**: A machine-readable list of all available Sub-Catalogs.
-3.  **Sub-Catalogs (`/catalogs/{id}`)**: The actual data providers. These behave as standard STAC API Landing Pages containing Collections.
+3.  **Sub-Catalogs (`/catalogs/{id}`)**: Each Catalog essentially behaves as standard STAC API Landing Page containing Collections.
+
+### Safety-First Architecture
+A core tenet of this extension is **Data Safety**. The `/catalogs` endpoints are strictly for **Organization**, while the core `/collections` endpoints are reserved for **Destruction**. Operations performed via the catalogs endpoint (like deleting a catalog) are guaranteed to never result in the accidental loss of Collection or Item data.
 
 ## Endpoints
 
@@ -31,6 +36,7 @@ In this model, the API has a fixed-depth "Hub and Spoke" structure:
 | `GET` | `/catalogs` | **The Registry.** Lists all available sub-catalogs. |
 | `GET` | `/catalogs/{catalogId}` | **Sub-Catalog Root.** Acts as the Landing Page for the provider. |
 | `GET` | `/catalogs/{catalogId}/conformance` | Conformance classes specific to this sub-catalog. |
+| `GET` | `/catalogs/{catalogId}/children` | **Children.** Lists all child resources (Catalogs and Collections). Supports filtering via `?type=Catalog` or `?type=Collection`. |
 | `GET` | `/catalogs/{catalogId}/queryables` | Filter Extension. Lists fields available for filtering in this sub-catalog. |
 | `GET` | `/catalogs/{catalogId}/collections` | Lists collections belonging to this sub-catalog. |
 | `GET` | `/catalogs/{catalogId}/collections/{collectionId}` | Gets a specific collection definition. |
@@ -43,9 +49,9 @@ These endpoints allow for the dynamic creation and deletion of the federation st
 | Method | URI | Description |
 | :--- | :--- | :--- |
 | `POST` | `/catalogs` | **Create Catalog.** Registers a new sub-catalog. |
-| `DELETE` | `/catalogs/{catalogId}` | **Delete Catalog.** Removes a sub-catalog. Supports `?cascade=true`. |
+| `DELETE` | `/catalogs/{catalogId}` | **Disband Catalog.** Removes a sub-catalog. **Safety: Never deletes linked collections.** |
 | `POST` | `/catalogs/{catalogId}/collections` | **Create Collection.** Creates a collection and links it to this catalog. |
-| `DELETE` | `/catalogs/{catalogId}/collections/{collectionId}` | **Delete Collection.** Deletes the collection or removes the link from the parent catalog. |
+| `DELETE` | `/catalogs/{catalogId}/collections/{collectionId}` | **Unlink Collection.** Removes the link from the parent catalog. **Safety: Never deletes the collection data.** |
 
 ## Poly-Hierarchy (Multi-Parenting)
 
@@ -65,12 +71,11 @@ Implementations supporting the Transaction endpoints MUST adhere to the followin
 * **Behavior:** The API creates the Catalog resource and makes it available in the `/catalogs` registry list.
 
 ### 2. Catalog Deletion (`DELETE /catalogs/{id}`)
-* **Default Behavior (`cascade=false`):**
-    * The Catalog object is deleted.
-    * Child Collections are **Unlinked** (the catalog ID is removed from their parent list). They are NOT deleted. If a collection has no other parents, it becomes a root-level collection.
-* **Cascade Behavior (`cascade=true`):**
-    * The Catalog object is deleted.
-    * All Child Collections linked to this catalog are **Deleted** from the database entirely. (Destructive operation).
+* **Behavior (Disband):**
+    * The Catalog object is deleted from the database.
+    * All Child Collections linked to this catalog are **Unlinked** (the catalog ID is removed from their parent list).
+    * **Adoption:** If an unlinked collection has no other parents (orphaned), it MUST be automatically adopted by the Root Catalog (or Landing Page) to ensure data is preserved.
+    * **Constraint:** This operation MUST NOT delete Collection or Item data. The `cascade` parameter is NOT supported.
 
 ### 3. Scoped Collection Creation (`POST /catalogs/{id}/collections`)
 * **Body:** Accepts a standard [STAC Collection](https://github.com/radiantearth/stac-spec/blob/master/collection-spec/collection-spec.md) JSON object.
@@ -80,9 +85,11 @@ Implementations supporting the Transaction endpoints MUST adhere to the followin
     3.  **Reverse Linking:** Automatically adds a `rel="child"` link in the Catalog pointing to the new Collection.
 
 ### 4. Scoped Collection Deletion (`DELETE .../collections/{id}`)
-* **Behavior:**
-    * If the Collection belongs to **multiple** catalogs: It is unlinked from the current catalog only (Relationship delete).
-    * If the Collection belongs to **only this** catalog: It is deleted from the database entirely (Resource delete).
+* **Behavior (Unlink):**
+    * The Collection is **Unlinked** from the specific catalog `{catalogId}`.
+    * If the Collection belongs to other catalogs, those links remain.
+    * If the Collection belongs **only** to this catalog, it becomes an orphan and MUST be automatically adopted by the Root Catalog.
+    * **Constraint:** This operation MUST NOT delete Collection or Item data. To delete data, the client must use the core `/collections/{id}` endpoint.
 
 ## Link Relations
 
@@ -93,95 +100,13 @@ This is the entry point.
 - `rel="catalogs"`: MUST point to the `/catalogs` endpoint (the registry).
 - `rel="service-desc"`: Points to the OpenAPI definition.
 
-*Note: We use `rel="catalogs"` instead of `rel="data"` to avoid confusing standard clients that expect `data` to point to a Collections list.*
-
 ### 2. The Sub-Catalog (`/catalogs/{catalogId}`)
 This resource acts as the **Landing Page** for the provider.
 - `rel="self"`: MUST point to `/catalogs/{catalogId}`.
 - `rel="parent"`: MUST point to the Global Root (`/`).
 - `rel="root"`: SHOULD point to the Global Root (`/`) to maintain a single navigation tree.
 - `rel="data"`: MUST point to `/catalogs/{catalogId}/collections`.
-
-## Response Examples
-
-### 1. The Registry List (`GET /catalogs`)
-
-This endpoint returns a JSON object structurally similar to a standard `/collections` response, but it contains a list of **Catalog** objects in a `catalogs` array.
-
-```json
-{
-  "catalogs": [
-    {
-      "id": "usgs-landsat",
-      "type": "Catalog",
-      "title": "USGS Landsat",
-      "description": "Landsat collections provided by USGS.",
-      "stac_version": "1.0.0",
-      "links": [
-        { "rel": "self", "href": "https://api.example.com/catalogs/usgs-landsat" },
-        { "rel": "root", "href": "https://api.example.com/" },
-        { "rel": "child", "href": "https://api.example.com/catalogs/usgs-landsat/collections" }
-      ]
-    },
-    {
-      "id": "esa-sentinel",
-      "type": "Catalog",
-      "title": "ESA Sentinel",
-      "description": "Sentinel collections provided by ESA.",
-      "stac_version": "1.0.0",
-      "links": [
-        { "rel": "self", "href": "https://api.example.com/catalogs/esa-sentinel" },
-        { "rel": "root", "href": "https://api.example.com/" },
-        { "rel": "child", "href": "https://api.example.com/catalogs/esa-sentinel/collections" }
-      ]
-    }
-  ],
-  "links": [
-    {
-      "rel": "self",
-      "href": "https://api.example.com/catalogs"
-    },
-    {
-      "rel": "root",
-      "href": "https://api.example.com/"
-    }
-  ]
-}
-```
-
-### 2. Catalog Deletion (`DELETE /catalogs/{id}`)
-* **Default Behavior:** Deletes the Catalog object.
-* **Cascade Parameter:** Implementations SHOULD support a `?cascade=true` query parameter.
-    * If `cascade=true`: The API deletes the Catalog **AND** all Collections linked as children of that Catalog.
-    * If `cascade=false` (default): The API deletes the Catalog, but orphaned Collections may remain in the database (implementation dependent).
-
-### 3. Scoped Collection Creation (`POST /catalogs/{id}/collections`)
-* **Body:** Accepts a standard [STAC Collection](https://github.com/radiantearth/stac-spec/blob/master/collection-spec/collection-spec.md) JSON object.
-* **Behavior:**
-    1.  Creates the Collection resource.
-    2.  **Automatic Linking:** Automatically adds a `rel="parent"` (or `rel="catalog"`) link in the Collection pointing to `{catalogId}`.
-    3.  **Reverse Linking:** Automatically adds a `rel="child"` link in the Catalog pointing to the new Collection.
-
-### 4. Scoped Collection Deletion (`DELETE .../collections/{id}`)
-* **Behavior:** Deletes the Collection resource and removes the corresponding `child` link from the parent Catalog to ensure referential integrity.
-
-## Link Relations
-
-Proper linking is critical for clients to navigate the federation structure.
-
-### 1. The Global Root (`/`)
-This is the entry point.
-- `rel="catalogs"`: MUST point to the `/catalogs` endpoint (the registry).
-- `rel="service-desc"`: Points to the OpenAPI definition.
-
-*Note: We use `rel="catalogs"` instead of `rel="data"` to avoid confusing standard clients that expect `data` to point to a Collections list.*
-
-### 2. The Sub-Catalog (`/catalogs/{catalogId}`)
-This resource acts as the **Landing Page** for the provider.
-- `rel="self"`: MUST point to `/catalogs/{catalogId}`.
-- `rel="parent"`: MUST point to the Global Root (`/`).
-- `rel="root"`: SHOULD point to the Global Root (`/`) to maintain a single navigation tree.
-- `rel="data"`: MUST point to `/catalogs/{catalogId}/collections`.
+- `rel="children"`: MUST point to `/catalogs/{catalogId}/children` (if Children extension is implemented).
 
 ## Response Examples
 
@@ -267,6 +192,43 @@ The global root remains a standard STAC Landing Page. Note the addition of the `
       "type": "application/json",
       "href": "https://api.example.com/catalogs",
       "title": "Federated Catalogs Registry"
+    }
+  ]
+}
+```
+
+### 3. The Children Endpoint (GET /catalogs/{id}/children)
+
+This endpoint returns a list of both child Catalogs and child Collections.
+
+```json
+{
+  "children": [
+    {
+      "id": "sub-catalog-1",
+      "type": "Catalog",
+      "title": "A nested sub-catalog",
+      "links": [
+        { "rel": "self", "href": "https://api.example.com/catalogs/sub-catalog-1" }
+      ]
+    },
+    {
+      "id": "collection-1",
+      "type": "Collection",
+      "title": "A child collection",
+      "links": [
+        { "rel": "self", "href": "https://api.example.com/collections/collection-1" }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://api.example.com/catalogs/c1/children"
+    },
+    {
+      "rel": "next",
+      "href": "https://api.example.com/catalogs/c1/children?token=..."
     }
   ]
 }
