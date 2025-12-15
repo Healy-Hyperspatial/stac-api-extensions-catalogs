@@ -16,14 +16,14 @@
 
 ## Introduction
 
-This extension enables a **Federated STAC API** architecture. It adds a dedicated **`/catalogs` endpoint** that serves as a machine-readable registry for multiple independent data providers, without altering the standard behavior of the API Root.
+This extension enables a **Virtual Organizational** architecture to enhance discoverability. It adds a dedicated **`/catalogs` endpoint** that serves as a machine-readable registry for **logical sub-catalogs**, allowing users to organize data into flexible, virtual hierarchies (e.g., by theme, semantics, or project) without duplicating the underlying data or altering the standard behavior of the API Root.
 
-In addition to discovery, this extension defines **Transactional** endpoints to create, update, and delete Catalogs and their child Collections, effectively acting as a management API for the federation.
+In addition to discovery, this extension defines **Transactional** endpoints to create, update, and delete Catalogs and manage their **associations** with Collections, effectively acting as a management API for these virtual organizational structures.
 
 In this model, the API supports a **Recursive Hierarchical** structure:
 
 1.  **Global Root (`/`)**: The standard entry point. It remains a clean STAC Landing Page but includes a link to the **Catalogs Registry**.
-2.  **The Registry (`/catalogs`)**: The top-level list of root catalogs.
+2.  **The Registry (`/catalogs`)**: The top-level list of root catalogs (e.g., "Forestry", "Oceanography").
 3.  **Sub-Catalogs (`/catalogs/{id}`)**: These behave as standard STAC Catalogs. Unlike the root, they can contain **nested Sub-Catalogs** (accessible via `/catalogs/{id}/catalogs`) in addition to Collections, allowing for deep, multi-level organizational trees (e.g., `Provider -> Theme -> Year`).
    
 ### Safety-First Architecture
