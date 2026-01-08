@@ -1,11 +1,12 @@
 openapi: 3.0.3
 info:
-  title: STAC API Catalogs Endpoint Extension
+  title: STAC API Multi-Tenant Catalogs Endpoint Extension
   version: 1.0.0-proposal
   description: |
-    An extension that adds a dedicated `/catalogs` endpoint to support a federated 
-    "Hub and Spoke" model. It allows a STAC API to act as a registry for multiple 
-    independent sub-catalogs without altering the standard behavior of the API Root.
+    An extension that adds a dedicated `/catalogs` endpoint to support a 
+    Multi-Tenant architecture. It allows a STAC API to act as a registry for 
+    multiple independent sub-catalogs (recursive hierarchy) without altering 
+    the standard behavior of the API Root.
     
     Includes "Safety-First" transaction logic where deletions via this endpoint 
     are strictly organizational (unlinking) and never destructive to data.
@@ -59,6 +60,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LandingPage'
+    put:
+      summary: Update Catalog Metadata
+      description: |
+        Updates the catalog's title, description, and other metadata.
+        This operation preserves existing hierarchy links (parent_ids) 
+        unless explicitly modified.
+      operationId: updateCatalog
+      requestBody:
+        description: The updated Catalog definition
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Catalog'
+      responses:
+        '200':
+          description: Catalog updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Catalog'
     delete:
       summary: Disband a Catalog
       description: |
